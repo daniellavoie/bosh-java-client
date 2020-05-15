@@ -1,0 +1,49 @@
+azs:
+- cloud_properties:
+    zone: northamerica-northeast1-b
+  name: z1
+- cloud_properties:
+    zone: northamerica-northeast1-b
+  name: z2
+- cloud_properties:
+    zone: northamerica-northeast1-b
+  name: z3
+compilation:
+  az: z1
+  network: default
+  reuse_compilation_vms: true
+  vm_type: default
+  workers: 5
+disk_types:
+- disk_size: 3000
+  name: default
+- disk_size: 50000
+  name: large
+networks:
+- name: default
+  subnets:
+  - azs:
+    - z1
+    - z2
+    - z3
+    cloud_properties:
+      network_name: pinot
+      subnetwork_name: pinot-default
+      tags:
+      - pinot
+    dns:
+    - 8.8.8.8
+    gateway: 10.0.0.1
+    range: 10.0.0.0/24
+  type: manual
+vm_types:
+- cloud_properties:
+    machine_type: n1-standard-2
+    root_disk_size_gb: 20
+    root_disk_type: pd-ssd
+  name: default
+- cloud_properties:
+    machine_type: n1-standard-2
+    root_disk_size_gb: 50
+    root_disk_type: pd-ssd
+  name: large

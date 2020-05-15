@@ -1,0 +1,12 @@
+# Use local vSphere CPI
+
+- type: replace
+  path: /releases/name=bosh-warden-cpi/url
+  value: file://((local_warden_cpi))
+
+- type: remove
+  path: /releases/name=bosh-warden-cpi/sha1
+
+- type: replace
+  path: /releases/name=bosh-warden-cpi/version
+  value: latest

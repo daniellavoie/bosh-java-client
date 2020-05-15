@@ -1,0 +1,386 @@
+---
+name: pinot-cluster
+addons:
+- jobs:
+  - name: bpm
+    release: bpm
+  name: bpm
+instance_groups:
+- name: zookeerer 
+  azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: zookeeper
+    properties:
+      scram:
+        users:
+          admin:
+            password: ((kafka-users-admin-password))
+            username: ((kafka-users-admin-username))
+          interbroker:
+            password: ((kafka-users-interbroker-password))
+            username: ((kafka-users-interbroker-username))
+          pinot:
+            password: ((kafka-users-pinot-password))
+            username: ((kafka-users-pinot-username))
+    release: apache-pinot-incubating
+  networks:
+  - name: default
+  persistent_disk: 5000
+  stemcell: default
+  vm_type: default
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: controller
+    properties:
+      cluster_name: pinot-cluster
+      keystore_password: ((keystore-password))
+      tls:
+        ca_certs:
+        - ((ca.certificate))
+        certificate: ((controller-tls))
+    release: apache-pinot-incubating
+  name: controller
+  networks:
+  - name: default
+  persistent_disk: 5000
+  stemcell: default
+  vm_type: default
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: broker
+    properties:
+      keystore_password: ((keystore-password))
+      tls:
+        ca_certs:
+        - ((ca.certificate))
+        certificate: ((broker-tls))
+    release: apache-pinot-incubating
+  name: broker
+  networks:
+  - name: default
+  persistent_disk: 5000
+  stemcell: default
+  vm_type: default
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: server
+    properties:
+      keystore_password: ((keystore-password))
+      tls:
+        ca_certs:
+        - ((ca.certificate))
+        certificate: ((server-tls))
+    release: apache-pinot-incubating
+  name: server
+  networks:
+  - name: default
+  persistent_disk: 5000
+  stemcell: default
+  vm_type: default
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: kafka
+    properties:
+      keystore_password: ((keystore-password))
+      min_isr: 1
+      replication_factor: 1
+      scram:
+        admin:
+          password: ((kafka-users-admin-password))
+          username: ((kafka-users-admin-username))
+        interbroker:
+          password: ((kafka-users-interbroker-password))
+          username: ((kafka-users-interbroker-username))
+      tls:
+        ca_certs:
+        - ((ca.certificate))
+        certificate: ((kafka-tls))
+    release: apache-pinot-incubating
+  name: kafka
+  networks:
+  - name: default
+  persistent_disk: 5000
+  stemcell: default
+  vm_type: default
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: alertmanager
+    properties:
+      alertmanager:
+        receivers:
+        - name: default
+        route:
+          receiver: default
+        test_alert:
+          daily: true
+    release: prometheus
+  - name: prometheus2
+    properties:
+      prometheus:
+        rule_files:
+        - /var/vcap/jobs/prometheus_alerts/*.alerts.yml
+        - /var/vcap/jobs/bosh_alerts/*.alerts.yml
+        scrape_configs:
+        - file_sd_configs:
+          - files:
+            - /var/vcap/store/bosh_exporter/bosh_target_groups.json
+          job_name: prometheus
+          relabel_configs:
+          - action: keep
+            regex: prometheus\d?
+            source_labels:
+            - __meta_bosh_job_process_name
+          - regex: (.*)
+            replacement: ${1}:9090
+            source_labels:
+            - __address__
+            target_label: __address__
+        - job_name: bosh
+          scrape_interval: 2m
+          scrape_timeout: 1m
+          static_configs:
+          - targets:
+            - localhost:9190
+        - file_sd_configs:
+          - files:
+            - /var/vcap/store/bosh_exporter/bosh_target_groups.json
+          job_name: grafana
+          relabel_configs:
+          - action: keep
+            regex: grafana
+            source_labels:
+            - __meta_bosh_job_process_name
+          - regex: (.*)
+            replacement: ${1}:3000
+            source_labels:
+            - __address__
+            target_label: __address__
+        - file_sd_configs:
+          - files:
+            - /var/vcap/store/bosh_exporter/bosh_target_groups.json
+          job_name: node
+          relabel_configs:
+          - action: keep
+            regex: node_exporter
+            source_labels:
+            - __meta_bosh_job_process_name
+          - regex: (.*)
+            replacement: ${1}:9100
+            source_labels:
+            - __address__
+            target_label: __address__
+        - file_sd_configs:
+          - files:
+            - /var/vcap/store/bosh_exporter/bosh_target_groups.json
+          job_name: broker
+          relabel_configs:
+          - action: keep
+            regex: broker
+            source_labels:
+            - __meta_bosh_job_process_name
+          - regex: (.*)
+            replacement: ${1}:10020
+            source_labels:
+            - __address__
+            target_label: __address__
+        - file_sd_configs:
+          - files:
+            - /var/vcap/store/bosh_exporter/bosh_target_groups.json
+          job_name: controller
+          relabel_configs:
+          - action: keep
+            regex: controller
+            source_labels:
+            - __meta_bosh_job_process_name
+          - regex: (.*)
+            replacement: ${1}:10030
+            source_labels:
+            - __address__
+            target_label: __address__
+        - file_sd_configs:
+          - files:
+            - /var/vcap/store/bosh_exporter/bosh_target_groups.json
+          job_name: server
+          relabel_configs:
+          - action: keep
+            regex: server
+            source_labels:
+            - __meta_bosh_job_process_name
+          - regex: (.*)
+            replacement: ${1}:10040
+            source_labels:
+            - __address__
+            target_label: __address__
+    release: prometheus
+  - name: prometheus_alerts
+    release: prometheus
+  - name: grafana
+    properties:
+      grafana:
+        dashboards: null
+        prometheus:
+          dashboard_folders:
+          - files:
+            - /var/vcap/jobs/grafana_dashboards/*.json
+            name: Grafana
+          - files:
+            - /var/vcap/jobs/prometheus_dashboards/*.json
+            - /var/vcap/jobs/bosh_dashboards/prometheus*.json
+            name: Prometheus
+          - files:
+            - /var/vcap/jobs/bosh_dashboards/bosh*.json
+            name: BOSH
+        security:
+          admin_password: ((grafana_password))
+          admin_user: admin
+          secret_key: ((grafana_secret_key))
+    release: prometheus
+  - name: grafana_dashboards
+    release: prometheus
+  - name: prometheus_dashboards
+    release: prometheus
+  - name: bosh_exporter
+    properties:
+      bosh_exporter:
+        bosh:
+          ca_cert: |+
+            -----BEGIN CERTIFICATE-----
+            MIIEUzCCArugAwIBAgIQZEKXcx8dio3A7A4CF9KOpzANBgkqhkiG9w0BAQsFADAz
+            MQwwCgYDVQQGEwNVU0ExFjAUBgNVBAoTDUNsb3VkIEZvdW5kcnkxCzAJBgNVBAMT
+            AmNhMB4XDTIwMDUwNTIyMTAwOVoXDTIxMDUwNTIyMTAwOVowMzEMMAoGA1UEBhMD
+            VVNBMRYwFAYDVQQKEw1DbG91ZCBGb3VuZHJ5MQswCQYDVQQDEwJjYTCCAaIwDQYJ
+            KoZIhvcNAQEBBQADggGPADCCAYoCggGBALi0cgHGYVWDCCpOnuUsaP5rCQomj4lt
+            arFK1hqH+8ZvQmC/tQahJQdu8bh2VznAghrTqlXGr/FDRmjcwc85uUMa8bK+PME8
+            UT4GzZnNpTYhYIaMzNLjcH9RADgVqMkj7U3rMpgdgvBsk2KMkIz8HJHQdCM2l0Ze
+            6sWsm48EfruiU0GOgLrRXBBqIDNR9BeuKiz1vPvODkGxKJu3Nc1kptpONybLCfr3
+            pe0RKe5E7ddviNmmbs2O+OPCX9xt/YRnrr4xnj4Iyp6F4XTd2Nr9Rq1VIA1Pdhlm
+            P3Z1GLL7qDfITQ3n8y6HTP17sa26bL2qYRik1m87nhyn5lTNHHjxtyYaU4Hg6MBi
+            49TbHZNu6meujOyVBaQhhqX7ACGICld1IV29n8oHh6uLj/KPcqX4GVL0fe4LzWVi
+            15663u2hIO8ntXdUE+70uyLqqaXTQuArf3wYI29fLWqbFuLRtViwp64giq03f4eT
+            oLq7aHR76729jdq9iCD/bHB8pXPL9azaSQIDAQABo2MwYTAOBgNVHQ8BAf8EBAMC
+            AQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUhNPOSlOPOywecUMRbVkVp3ub
+            oaowHwYDVR0jBBgwFoAUhNPOSlOPOywecUMRbVkVp3uboaowDQYJKoZIhvcNAQEL
+            BQADggGBAF+ovRKlSS3kNs1I9ZVYhiFs/wv4muapRm8zlQThWHIRXCR7z7Fspha6
+            SHKoNXys+DG14cFrE5L2ZSLVY8h83ploE/8IfO/Lsy75ap2BR3uOKsIYfb5IoAwd
+            vIon0cMyypEMTEgjMI/B0HTeB2YDOlLMCMES5nO7LWfJSO1SYepZz+AbOUbHpU2i
+            gBQNeOSQrrDJRu7hcjjUMZZs2c6YvD62REM0FSla34cmuFvalffLhLNK09fqM6Qa
+            Cu70hAsMaNyZjdHcXYQ/RfQdFGjEYyQtzqaga6bQOzAlhD5OjqfeFnQTpe9TGXRX
+            drKNo2nk07G5KXhwQXteUzuNhTHUv5TOLkUFpsXmacoHuE13d/ZetGCNnmU9H3ly
+            BOH+/n25ZYUcCGHj3Leh9R/7Gz6kyI1iqQhNHgq9kMpDuSQQ5uoZvg9km7dyhVVi
+            tj4IdJBafD2NY1SmTpwH+vsbl+PWEHCEi9Ywm2WKDbre47AsA2TEp6zPOi1xhcAv
+            T1XXodIA4w==
+            -----END CERTIFICATE-----
+
+          password: 23ppgeis6gmscl0ao28t
+          url: 192.168.50.6
+          username: admin
+        metrics:
+          environment: pinot-cluster
+    release: prometheus
+  - name: bosh_alerts
+    release: prometheus
+  - name: bosh_dashboards
+    release: prometheus
+  name: prometheus
+  networks:
+  - name: default
+  persistent_disk: 10240
+  stemcell: default
+  vm_type: default
+releases:
+- name: bpm
+  sha1: d9a22dff24a659a8f6585a600fdd7e27bf211f3d
+  url: https://s3.amazonaws.com/bosh-compiled-release-tarballs/bpm-1.1.8-ubuntu-xenial-621.71-20200422-220353-760960221-20200422220355.tgz
+  version: 1.1.8
+- name: apache-pinot-incubating
+  version: 0.3.0
+- name: prometheus
+  sha1: 2e47fad474d5f88ad034a45a765c4b3dfb76fbcf
+  url: https://github.com/bosh-prometheus/prometheus-boshrelease/releases/download/v26.2.0/prometheus-26.2.0.tgz
+  version: 26.2.0
+- name: node-exporter
+  sha1: 7161837435dae4bdc1a9356f7d411be3822666ea
+  url: https://github.com/bosh-prometheus/node-exporter-boshrelease/releases/download/v4.2.0/node-exporter-4.2.0.tgz
+  version: 4.2.0
+stemcells:
+- alias: default
+  os: ubuntu-xenial
+  version: 621.71
+update:
+  canaries: 1
+  canary_watch_time: 1000-60000
+  max_in_flight: 1
+  serial: false
+  update_watch_time: 1000-60000
+variables:
+- name: keystore-password
+  type: password
+- name: ca
+  options:
+    common_name: Bosh Certificate Authority
+    is_ca: true
+  type: certificate
+- name: kafka-tls
+  options:
+    ca: ca
+    common_name: '*.kafka.default.pinot-cluster.bosh'
+  type: certificate
+- name: broker-tls
+  options:
+    ca: ca
+    common_name: '*.broker.default.pinot-cluster.bosh'
+  type: certificate
+- name: controller-tls
+  options:
+    ca: ca
+    common_name: '*.controller.default.pinot-cluster.bosh'
+  type: certificate
+- name: server-tls
+  options:
+    ca: ca
+    common_name: '*.server.default.pinot-cluster.bosh'
+  type: certificate
+- name: kafka-users-admin-username
+  type: password
+- name: kafka-users-admin-password
+  type: password
+- name: kafka-users-interbroker-username
+  type: password
+- name: kafka-users-interbroker-password
+  type: password
+- name: kafka-users-pinot-username
+  type: password
+- name: kafka-users-pinot-password
+  type: password
+- name: alertmanager_password
+  type: password
+- name: prometheus_password
+  type: password
+- name: grafana_password
+  type: password
+- name: grafana_secret_key
+  type: password
