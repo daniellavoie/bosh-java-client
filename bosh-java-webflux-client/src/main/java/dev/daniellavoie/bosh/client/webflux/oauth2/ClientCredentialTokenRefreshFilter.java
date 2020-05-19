@@ -1,7 +1,10 @@
 package dev.daniellavoie.bosh.client.webflux.oauth2;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ClientHttpConnector;
@@ -16,6 +19,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import reactor.core.publisher.Mono;
 
 public class ClientCredentialTokenRefreshFilter implements ExchangeFilterFunction {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ClientCredentialTokenRefreshFilter.class);
+
 	private final TokenRequest tokenRequest;
 
 	private final WebClient webClient;
@@ -36,7 +41,7 @@ public class ClientCredentialTokenRefreshFilter implements ExchangeFilterFunctio
 	public Mono<ClientResponse> filter(ClientRequest request, ExchangeFunction next) {
 		return Mono.justOrEmpty(accessToken)
 
-				.filter(accessToken -> LocalDateTime.now().isAfter(tokenExpiration.minusMinutes(1)))
+				.filter(accessToken -> LocalDateTime.now().isBefore(tokenExpiration.minusMinutes(1)))
 
 				.switchIfEmpty(refreshToken())
 
@@ -56,6 +61,10 @@ public class ClientCredentialTokenRefreshFilter implements ExchangeFilterFunctio
 
 				.exchange()
 
+				.doOnSubscribe(subscription -> LOGGER.debug("Refreshing oauth2 client credentials token."))
+
+				.doOnSuccess(response -> LOGGER.debug("Successfully refreshed oauth2 client credentials token."))
+
 				.flatMap(response -> response.bodyToMono(Token.class))
 
 				.map(this::updateToken);
@@ -63,7 +72,7 @@ public class ClientCredentialTokenRefreshFilter implements ExchangeFilterFunctio
 
 	private String updateToken(Token token) {
 		this.accessToken = token.getAccessToken();
-		this.tokenExpiration = LocalDateTime.now().plusSeconds(token.getExpiresIn());
+		this.tokenExpiration = LocalDateTime.now().plus(token.getExpiresIn(), ChronoUnit.SECONDS);
 
 		return this.accessToken;
 	}

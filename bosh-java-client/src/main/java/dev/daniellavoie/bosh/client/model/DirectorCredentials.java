@@ -296,4 +296,209 @@ public class DirectorCredentials {
 	public void setUaaSsl(Certificate uaaSsl) {
 		this.uaaSsl = uaaSsl;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((adminPassword == null) ? 0 : adminPassword.hashCode());
+		result = prime * result + ((blobstoreAgentPassword == null) ? 0 : blobstoreAgentPassword.hashCode());
+		result = prime * result + ((blobstoreCa == null) ? 0 : blobstoreCa.hashCode());
+		result = prime * result + ((blobstoreDirectorPassword == null) ? 0 : blobstoreDirectorPassword.hashCode());
+		result = prime * result + ((blobstoreServerTls == null) ? 0 : blobstoreServerTls.hashCode());
+		result = prime * result + ((credhubAdminClientSecret == null) ? 0 : credhubAdminClientSecret.hashCode());
+		result = prime * result + ((credhubCa == null) ? 0 : credhubCa.hashCode());
+		result = prime * result + ((credhubCliUserPassword == null) ? 0 : credhubCliUserPassword.hashCode());
+		result = prime * result + ((credhubEncryptionPassword == null) ? 0 : credhubEncryptionPassword.hashCode());
+		result = prime * result + ((credhubTls == null) ? 0 : credhubTls.hashCode());
+		result = prime * result + ((defaultCa == null) ? 0 : defaultCa.hashCode());
+		result = prime * result + ((directorSsl == null) ? 0 : directorSsl.hashCode());
+		result = prime * result + ((hmPassword == null) ? 0 : hmPassword.hashCode());
+		result = prime * result + ((jumpboxSsh == null) ? 0 : jumpboxSsh.hashCode());
+		result = prime * result + ((mbusBootstrapPassword == null) ? 0 : mbusBootstrapPassword.hashCode());
+		result = prime * result + ((mbusBootstrapSsl == null) ? 0 : mbusBootstrapSsl.hashCode());
+		result = prime * result + ((natsCa == null) ? 0 : natsCa.hashCode());
+		result = prime * result + ((natsClientsDirectorTls == null) ? 0 : natsClientsDirectorTls.hashCode());
+		result = prime * result + ((natsClientsHealthMonitorTls == null) ? 0 : natsClientsHealthMonitorTls.hashCode());
+		result = prime * result + ((natsPassword == null) ? 0 : natsPassword.hashCode());
+		result = prime * result + ((natsServerTls == null) ? 0 : natsServerTls.hashCode());
+		result = prime * result + ((postgresPassword == null) ? 0 : postgresPassword.hashCode());
+		result = prime * result + ((uaaAdminClientSecret == null) ? 0 : uaaAdminClientSecret.hashCode());
+		result = prime * result + ((uaaClientsDirectorToCredhub == null) ? 0 : uaaClientsDirectorToCredhub.hashCode());
+		result = prime * result + ((uaaEncryptionKey1 == null) ? 0 : uaaEncryptionKey1.hashCode());
+		result = prime * result + ((uaaJwtSigningKey == null) ? 0 : uaaJwtSigningKey.hashCode());
+		result = prime * result + ((uaaServiceProviderSsl == null) ? 0 : uaaServiceProviderSsl.hashCode());
+		result = prime * result + ((uaaSsl == null) ? 0 : uaaSsl.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DirectorCredentials other = (DirectorCredentials) obj;
+		if (adminPassword == null) {
+			if (other.adminPassword != null)
+				return false;
+		} else if (!adminPassword.equals(other.adminPassword))
+			return false;
+		if (blobstoreAgentPassword == null) {
+			if (other.blobstoreAgentPassword != null)
+				return false;
+		} else if (!blobstoreAgentPassword.equals(other.blobstoreAgentPassword))
+			return false;
+		if (blobstoreCa == null) {
+			if (other.blobstoreCa != null)
+				return false;
+		} else if (!blobstoreCa.equals(other.blobstoreCa))
+			return false;
+		if (blobstoreDirectorPassword == null) {
+			if (other.blobstoreDirectorPassword != null)
+				return false;
+		} else if (!blobstoreDirectorPassword.equals(other.blobstoreDirectorPassword))
+			return false;
+		if (blobstoreServerTls == null) {
+			if (other.blobstoreServerTls != null)
+				return false;
+		} else if (!blobstoreServerTls.equals(other.blobstoreServerTls))
+			return false;
+		if (credhubAdminClientSecret == null) {
+			if (other.credhubAdminClientSecret != null)
+				return false;
+		} else if (!credhubAdminClientSecret.equals(other.credhubAdminClientSecret))
+			return false;
+		if (credhubCa == null) {
+			if (other.credhubCa != null)
+				return false;
+		} else if (!credhubCa.equals(other.credhubCa))
+			return false;
+		if (credhubCliUserPassword == null) {
+			if (other.credhubCliUserPassword != null)
+				return false;
+		} else if (!credhubCliUserPassword.equals(other.credhubCliUserPassword))
+			return false;
+		if (credhubEncryptionPassword == null) {
+			if (other.credhubEncryptionPassword != null)
+				return false;
+		} else if (!credhubEncryptionPassword.equals(other.credhubEncryptionPassword))
+			return false;
+		if (credhubTls == null) {
+			if (other.credhubTls != null)
+				return false;
+		} else if (!credhubTls.equals(other.credhubTls))
+			return false;
+		if (defaultCa == null) {
+			if (other.defaultCa != null)
+				return false;
+		} else if (!defaultCa.equals(other.defaultCa))
+			return false;
+		if (directorSsl == null) {
+			if (other.directorSsl != null)
+				return false;
+		} else if (!directorSsl.equals(other.directorSsl))
+			return false;
+		if (hmPassword == null) {
+			if (other.hmPassword != null)
+				return false;
+		} else if (!hmPassword.equals(other.hmPassword))
+			return false;
+		if (jumpboxSsh == null) {
+			if (other.jumpboxSsh != null)
+				return false;
+		} else if (!jumpboxSsh.equals(other.jumpboxSsh))
+			return false;
+		if (mbusBootstrapPassword == null) {
+			if (other.mbusBootstrapPassword != null)
+				return false;
+		} else if (!mbusBootstrapPassword.equals(other.mbusBootstrapPassword))
+			return false;
+		if (mbusBootstrapSsl == null) {
+			if (other.mbusBootstrapSsl != null)
+				return false;
+		} else if (!mbusBootstrapSsl.equals(other.mbusBootstrapSsl))
+			return false;
+		if (natsCa == null) {
+			if (other.natsCa != null)
+				return false;
+		} else if (!natsCa.equals(other.natsCa))
+			return false;
+		if (natsClientsDirectorTls == null) {
+			if (other.natsClientsDirectorTls != null)
+				return false;
+		} else if (!natsClientsDirectorTls.equals(other.natsClientsDirectorTls))
+			return false;
+		if (natsClientsHealthMonitorTls == null) {
+			if (other.natsClientsHealthMonitorTls != null)
+				return false;
+		} else if (!natsClientsHealthMonitorTls.equals(other.natsClientsHealthMonitorTls))
+			return false;
+		if (natsPassword == null) {
+			if (other.natsPassword != null)
+				return false;
+		} else if (!natsPassword.equals(other.natsPassword))
+			return false;
+		if (natsServerTls == null) {
+			if (other.natsServerTls != null)
+				return false;
+		} else if (!natsServerTls.equals(other.natsServerTls))
+			return false;
+		if (postgresPassword == null) {
+			if (other.postgresPassword != null)
+				return false;
+		} else if (!postgresPassword.equals(other.postgresPassword))
+			return false;
+		if (uaaAdminClientSecret == null) {
+			if (other.uaaAdminClientSecret != null)
+				return false;
+		} else if (!uaaAdminClientSecret.equals(other.uaaAdminClientSecret))
+			return false;
+		if (uaaClientsDirectorToCredhub == null) {
+			if (other.uaaClientsDirectorToCredhub != null)
+				return false;
+		} else if (!uaaClientsDirectorToCredhub.equals(other.uaaClientsDirectorToCredhub))
+			return false;
+		if (uaaEncryptionKey1 == null) {
+			if (other.uaaEncryptionKey1 != null)
+				return false;
+		} else if (!uaaEncryptionKey1.equals(other.uaaEncryptionKey1))
+			return false;
+		if (uaaJwtSigningKey == null) {
+			if (other.uaaJwtSigningKey != null)
+				return false;
+		} else if (!uaaJwtSigningKey.equals(other.uaaJwtSigningKey))
+			return false;
+		if (uaaServiceProviderSsl == null) {
+			if (other.uaaServiceProviderSsl != null)
+				return false;
+		} else if (!uaaServiceProviderSsl.equals(other.uaaServiceProviderSsl))
+			return false;
+		if (uaaSsl == null) {
+			if (other.uaaSsl != null)
+				return false;
+		} else if (!uaaSsl.equals(other.uaaSsl))
+			return false;
+		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "DirectorCredentials [adminPassword=" + adminPassword + ", blobstoreAgentPassword="
+				+ blobstoreAgentPassword + ", blobstoreCa=" + blobstoreCa + ", blobstoreDirectorPassword="
+				+ blobstoreDirectorPassword + ", blobstoreServerTls=" + blobstoreServerTls
+				+ ", credhubAdminClientSecret=" + credhubAdminClientSecret + ", credhubCa=" + credhubCa
+				+ ", credhubCliUserPassword=" + credhubCliUserPassword + ", credhubEncryptionPassword="
+				+ credhubEncryptionPassword + ", credhubTls=" + credhubTls + ", defaultCa=" + defaultCa
+				+ ", directorSsl=" + directorSsl + ", hmPassword=" + hmPassword + ", jumpboxSsh=" + jumpboxSsh
+				+ ", mbusBootstrapPassword=" + mbusBootstrapPassword + ", mbusBootstrapSsl=" + mbusBootstrapSsl
+				+ ", natsCa=" + natsCa + ", natsClientsDirectorTls=" + natsClientsDirectorTls
+				+ ", natsClientsHealthMonitorTls=" + natsClientsHealthMonitorTls + ", natsPassword=" + natsPassword
+				+ ", natsServerTls=" + natsServerTls + ", postgresPassword=" + postgresPassword
+				+ ", uaaAdminClientSecret=" + uaaAdminClientSecret + ", uaaClientsDirectorToCredhub="
+				+ uaaClientsDirectorToCredhub + ", uaaEncryptionKey1=" + uaaEncryptionKey1 + ", uaaJwtSigningKey="
+				+ uaaJwtSigningKey + ", uaaServiceProviderSsl=" + uaaServiceProviderSsl + ", uaaSsl=" + uaaSsl + "]";
+	}
 }

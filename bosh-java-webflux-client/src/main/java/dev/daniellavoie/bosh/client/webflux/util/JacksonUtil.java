@@ -67,4 +67,7 @@ public abstract class JacksonUtil {
 		}
 	}
 
+	public static String writeYaml(Object value) {
+		return write(value, YAML_OBJECTMAPPER);
+	}
 }

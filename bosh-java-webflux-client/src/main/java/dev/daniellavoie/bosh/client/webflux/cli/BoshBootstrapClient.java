@@ -41,12 +41,8 @@ public class BoshBootstrapClient {
 
 		LOGGER.info("Testing Bosh CLI.");
 
-		try {
-			runProcess(Runtime.getRuntime().exec(cliPath + " environments"),
-					log -> LOGGER.info("Test bosh cli environment event : {}", log)).block();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		runProcess(cliPath + " environments", log -> LOGGER.info("Test bosh cli environment event : {}", log),
+				log -> LOGGER.info("Test bosh cli environment error : {}", log)).block();
 	}
 
 	private DirectorInfo buildDirectorCredentials(String environmentName, DirectorConfig directorConfig,
@@ -112,49 +108,48 @@ public class BoshBootstrapClient {
 		String directorCredentialsFile = stateDir + "/director-credentials.yml";
 		String directorStateFile = stateDir + "/director-state.yml";
 
-		try {
-			copyFile(manifest, stateDir);
+		Optional.ofNullable(existingDirectorInfo.getDirectorCredentials())
+				.ifPresent(directorCredentials -> copyBytes(JacksonUtil.writeYaml(directorCredentials).getBytes(),
+						directorCredentialsFile));
+		Optional.ofNullable(existingDirectorInfo.getDirectorState())
+				.ifPresent(directorState -> copyBytes(directorState.getBytes(), directorCredentialsFile));
 
-			operators.stream().forEach(operator -> copyFile(operator, stateDir));
+		copyFile(manifest, stateDir);
 
-			var variableFileIndex = new AtomicInteger();
-			var variableFilesNames = variableFiles.entrySet().stream().collect(Collectors.toMap(Entry::getKey,
-					entry -> stateDir + "/var-files/" + variableFileIndex.getAndIncrement() + ".var"));
+		operators.stream().forEach(operator -> copyFile(operator, stateDir));
 
-			variableFiles.keySet().stream().forEach(variableKey -> copyVariableFile(variableFilesNames.get(variableKey),
-					variableFiles.get(variableKey)));
+		var variableFileIndex = new AtomicInteger();
+		var variableFilesNames = variableFiles.entrySet().stream().collect(Collectors.toMap(Entry::getKey,
+				entry -> stateDir + "/var-files/" + variableFileIndex.getAndIncrement() + ".var"));
 
-			Optional.ofNullable(existingDirectorInfo.getDirectorCredentials())
-					.ifPresent(directorCredentials -> copyBytes(JacksonUtil.write(directorCredentials).getBytes(),
-							directorCredentialsFile));
-			Optional.ofNullable(existingDirectorInfo.getDirectorState())
-					.ifPresent(directorState -> copyBytes(directorState.getBytes(), directorStateFile));
+		variableFiles.keySet().stream().forEach(
+				variableKey -> copyVariableFile(variableFilesNames.get(variableKey), variableFiles.get(variableKey)));
 
-			var directorVariables = Map.of("director_name", environmentName, "internal_ip", directorConfig.getIp(),
-					"internal_gw", directorConfig.getGateway(), "internal_cidr", directorConfig.getCidr());
+		Optional.ofNullable(existingDirectorInfo.getDirectorCredentials())
+				.ifPresent(directorCredentials -> copyBytes(JacksonUtil.write(directorCredentials).getBytes(),
+						directorCredentialsFile));
+		Optional.ofNullable(existingDirectorInfo.getDirectorState())
+				.ifPresent(directorState -> copyBytes(directorState.getBytes(), directorStateFile));
 
-			String commandLine = cliPath + " create-env " + stateDir + "/" + manifest + " \n  --state "
-					+ directorStateFile + " \n  --vars-store " + directorCredentialsFile + " \n  "
-					+ (operators.size() != 0 ? format(stateDir, operators) + " \n  " : "")
-					+ (variables.size() != 0 ? format(variables) + " \n  " : "")
-					+ (variableFilesNames.size() != 0 ? formatVarFiles(variableFilesNames) + " \n  " : "")
-					+ format(directorVariables) + " \n  -n";
+		var directorVariables = Map.of("director_name", environmentName, "internal_ip", directorConfig.getIp(),
+				"internal_gw", directorConfig.getGateway(), "internal_cidr", directorConfig.getCidr());
 
-			LOGGER.info("Executing command \n\n{}", commandLine);
+		String commandLine = cliPath + " create-env " + stateDir + "/" + manifest + " \n  --state " + directorStateFile
+				+ " \n  --vars-store " + directorCredentialsFile + " \n  "
+				+ (operators.size() != 0 ? format(stateDir, operators) + " \n  " : "")
+				+ (variables.size() != 0 ? format(variables) + " \n  " : "")
+				+ (variableFilesNames.size() != 0 ? formatVarFiles(variableFilesNames) + " \n  " : "")
+				+ format(directorVariables) + " \n  -n";
 
-			return runProcess(Runtime.getRuntime().exec(commandLine),
-					log -> LOGGER.info("Create environment update : {}", log))
+		LOGGER.info("Executing command \n\n{}", commandLine);
 
-							.then(Mono.defer(() -> Mono.just(buildDirectorCredentials(environmentName, directorConfig,
-									directorCredentialsFile, directorStateFile))))
+		return runProcess(commandLine, log -> LOGGER.info("Create environment update : {}", log),
+				log -> LOGGER.info("Create environment update : {}", log))
 
-							.doOnTerminate(() -> cleanVarFiles(variableFilesNames));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} finally {
-			cleanFileSilently(directorCredentialsFile);
-			cleanFileSilently(directorStateFile);
-		}
+						.then(Mono.defer(() -> Mono.just(buildDirectorCredentials(environmentName, directorConfig,
+								directorCredentialsFile, directorStateFile))))
+
+						.doOnTerminate(() -> cleanVarFiles(variableFilesNames));
 	}
 
 	private String format(Map<String, String> variables) {
@@ -173,36 +168,44 @@ public class BoshBootstrapClient {
 				.collect(Collectors.joining(" \n  "));
 	}
 
-	private Mono<Void> runProcess(Process process, Consumer<String> progressSink) {
-		var errorsBuffer = new ArrayList<String>();
+	private Mono<Void> runProcess(String commandLine, Consumer<String> stdSink, Consumer<String> errSink) {
+		try {
+			var errorsBuffer = new ArrayList<String>();
 
-		Flux.fromStream(new BufferedReader(new InputStreamReader(process.getInputStream())).lines())
+			Process process = Runtime.getRuntime().exec(commandLine);
 
-				.doOnNext(progressSink::accept)
+			Flux.fromStream(new BufferedReader(new InputStreamReader(process.getInputStream())).lines())
 
-				.doOnError(throwable -> LOGGER.error("Failed to process output from process.", throwable))
+					.doOnNext(stdSink::accept)
 
-				.subscribeOn(Schedulers.elastic())
+					.doOnError(throwable -> LOGGER.error("Failed to process output from process.", throwable))
 
-				.log()
+					.subscribeOn(Schedulers.newSingle("create-env-std"))
 
-				.subscribe();
+					.log()
 
-		Flux.fromStream(new BufferedReader(new InputStreamReader(process.getErrorStream())).lines())
+					.subscribe();
 
-				.doOnNext(errorsBuffer::add)
+			Flux.fromStream(new BufferedReader(new InputStreamReader(process.getErrorStream())).lines())
 
-				.doOnError(throwable -> LOGGER.error("Failed to process error output from process.", throwable))
+					.doOnNext(errSink::accept)
 
-				.subscribeOn(Schedulers.elastic())
+					.doOnNext(errorsBuffer::add)
 
-				.log()
+					.doOnError(throwable -> LOGGER.error("Failed to process error output from process.", throwable))
 
-				.subscribe();
+					.subscribeOn(Schedulers.newSingle("create-env-err"))
 
-		return Mono.fromFuture(process.onExit())
-				.flatMap(completedProcess -> completedProcess.exitValue() == 0 ? Mono.empty()
-						: Mono.error(new RuntimeException("Failed to update Bosh environment. Cause : \n"
-								+ errorsBuffer.stream().collect(Collectors.joining("\n")))));
+					.log()
+
+					.subscribe();
+
+			return Mono.fromFuture(process.onExit())
+					.flatMap(completedProcess -> completedProcess.exitValue() == 0 ? Mono.empty()
+							: Mono.error(new RuntimeException("Failed to update Bosh environment. Cause : \n"
+									+ errorsBuffer.stream().collect(Collectors.joining("\n")))));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }
