@@ -4,8 +4,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
-import javax.net.ssl.SSLException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -35,10 +33,8 @@ import dev.daniellavoie.bosh.client.model.Task;
 import dev.daniellavoie.bosh.client.model.Task.State;
 import dev.daniellavoie.bosh.client.model.TaskEvent;
 import dev.daniellavoie.bosh.client.webflux.oauth2.ClientCredentialTokenRefreshFilter;
-import dev.daniellavoie.bosh.client.webflux.tls.DynamicX509TrustManager;
 import dev.daniellavoie.bosh.client.webflux.util.JacksonUtil;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
+import dev.daniellavoie.bosh.client.webflux.util.SslUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -58,7 +54,7 @@ public class BoshWebFluxClient {
 
 	public BoshWebFluxClient(String environment, String clientId, String clientSecret, String tokenUri, byte[] boshCA) {
 		var httpClientConnector = new ReactorClientHttpConnector(
-				HttpClient.create().secure(t -> t.sslContext(createSSLContext(boshCA))));
+				HttpClient.create().secure(t -> t.sslContext(SslUtil.createSSLContext(boshCA))));
 
 		webClient = WebClient.builder()
 
@@ -81,14 +77,6 @@ public class BoshWebFluxClient {
 				.register(new Jackson2JsonEncoder(OBJECT_MAPPER, MediaType.APPLICATION_JSON));
 		clientCodecConfigurer.customCodecs()
 				.register(new Jackson2JsonEncoder(YAML_MAPPER, new MediaType("text", "yaml")));
-	}
-
-	private SslContext createSSLContext(byte[] boshCA) {
-		try {
-			return SslContextBuilder.forClient().trustManager(new DynamicX509TrustManager(boshCA)).build();
-		} catch (SSLException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	public Mono<Integer> deleteDeployment(String deployment) {

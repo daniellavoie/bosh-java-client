@@ -28,6 +28,7 @@ import dev.daniellavoie.bosh.client.model.DirectorConfig;
 import dev.daniellavoie.bosh.client.model.DirectorInfo;
 import dev.daniellavoie.bosh.client.model.Task;
 import dev.daniellavoie.bosh.client.webflux.cli.BoshBootstrapClient;
+import dev.daniellavoie.bosh.client.webflux.cli.CreateEnvironmentRequest;
 
 @SpringBootTest
 public class BoshWebFluxClientTest {
@@ -72,9 +73,12 @@ public class BoshWebFluxClientTest {
 
 			var variables = Map.of("outbound_network_name", "NatNetwork");
 
-			var directorInfo = boshBootstrapClient.createEnvironment("bosh-lite", getStateDir("bosh-lite"),
+			var request = new CreateEnvironmentRequest("bosh-lite", getStateDir("bosh-lite"),
 					new DirectorConfig("192.168.50.6", "192.168.50.0/24", "192.168.50.1"),
-					new DirectorInfo(null, null, null), "bosh-manifests/bosh.yml", operators, variables, Map.of())
+					new DirectorInfo(null, null, null), "bosh-manifests/bosh.yml", operators, variables, Map.of());
+
+			var directorInfo = boshBootstrapClient
+					.createEnvironment(request, log -> LOGGER.info(log), log -> LOGGER.error(log))
 
 					.block();
 

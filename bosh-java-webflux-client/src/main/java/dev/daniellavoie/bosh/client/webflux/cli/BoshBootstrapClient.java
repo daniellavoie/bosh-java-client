@@ -102,54 +102,48 @@ public class BoshBootstrapClient {
 		}
 	}
 
-	public Mono<DirectorInfo> createEnvironment(String environmentName, String stateDir, DirectorConfig directorConfig,
-			DirectorInfo existingDirectorInfo, String manifest, List<String> operators, Map<String, String> variables,
-			Map<String, String> variableFiles) {
-		String directorCredentialsFile = stateDir + "/director-credentials.yml";
-		String directorStateFile = stateDir + "/director-state.yml";
+	public Mono<DirectorInfo> createEnvironment(CreateEnvironmentRequest request, Consumer<String> stdOutConsumer,
+			Consumer<String> stdErrConsumer) {
+		String directorCredentialsFile = request.getStateDir() + "/director-credentials.yml";
+		String directorStateFile = request.getStateDir() + "/director-state.yml";
 
-		Optional.ofNullable(existingDirectorInfo.getDirectorCredentials())
+		Optional.ofNullable(request.getExistingDirectorInfo().getDirectorCredentials())
 				.ifPresent(directorCredentials -> copyBytes(JacksonUtil.writeYaml(directorCredentials).getBytes(),
 						directorCredentialsFile));
-		Optional.ofNullable(existingDirectorInfo.getDirectorState())
+		Optional.ofNullable(request.getExistingDirectorInfo().getDirectorState())
 				.ifPresent(directorState -> copyBytes(directorState.getBytes(), directorCredentialsFile));
 
-		copyFile(manifest, stateDir);
+		copyFile(request.getManifest(), request.getStateDir());
 
-		operators.stream().forEach(operator -> copyFile(operator, stateDir));
+		request.getOperators().stream().forEach(operator -> copyFile(operator, request.getStateDir()));
 
 		var variableFileIndex = new AtomicInteger();
-		var variableFilesNames = variableFiles.entrySet().stream().collect(Collectors.toMap(Entry::getKey,
-				entry -> stateDir + "/var-files/" + variableFileIndex.getAndIncrement() + ".var"));
+		var variableFilesNames = request.getVariableFiles().entrySet().stream().collect(Collectors.toMap(Entry::getKey,
+				entry -> request.getStateDir() + "/var-files/" + variableFileIndex.getAndIncrement() + ".var"));
 
-		variableFiles.keySet().stream().forEach(
-				variableKey -> copyVariableFile(variableFilesNames.get(variableKey), variableFiles.get(variableKey)));
+		request.getVariableFiles().entrySet().stream()
+				.forEach(entry -> copyVariableFile(variableFilesNames.get(entry.getKey()), entry.getValue()));
 
-		Optional.ofNullable(existingDirectorInfo.getDirectorCredentials())
-				.ifPresent(directorCredentials -> copyBytes(JacksonUtil.write(directorCredentials).getBytes(),
-						directorCredentialsFile));
-		Optional.ofNullable(existingDirectorInfo.getDirectorState())
-				.ifPresent(directorState -> copyBytes(directorState.getBytes(), directorStateFile));
+		var directorVariables = Map.of("director_name", request.getEnvironmentName(), "internal_ip",
+				request.getDirectorConfig().getIp(), "internal_gw", request.getDirectorConfig().getGateway(),
+				"internal_cidr", request.getDirectorConfig().getCidr());
 
-		var directorVariables = Map.of("director_name", environmentName, "internal_ip", directorConfig.getIp(),
-				"internal_gw", directorConfig.getGateway(), "internal_cidr", directorConfig.getCidr());
-
-		String commandLine = cliPath + " create-env " + stateDir + "/" + manifest + " \n  --state " + directorStateFile
-				+ " \n  --vars-store " + directorCredentialsFile + " \n  "
-				+ (operators.size() != 0 ? format(stateDir, operators) + " \n  " : "")
-				+ (variables.size() != 0 ? format(variables) + " \n  " : "")
+		String commandLine = cliPath + " create-env " + request.getStateDir() + "/" + request.getManifest()
+				+ " \n  --state " + directorStateFile + " \n  --vars-store " + directorCredentialsFile + " \n  "
+				+ (request.getOperators().size() != 0 ? format(request.getStateDir(), request.getOperators()) + " \n  "
+						: "")
+				+ (request.getVariables().size() != 0 ? format(request.getVariables()) + " \n  " : "")
 				+ (variableFilesNames.size() != 0 ? formatVarFiles(variableFilesNames) + " \n  " : "")
 				+ format(directorVariables) + " \n  -n";
 
 		LOGGER.info("Executing command \n\n{}", commandLine);
 
-		return runProcess(commandLine, log -> LOGGER.info("Create environment update : {}", log),
-				log -> LOGGER.info("Create environment update : {}", log))
+		return runProcess(commandLine, stdOutConsumer::accept, stdErrConsumer::accept)
 
-						.then(Mono.defer(() -> Mono.just(buildDirectorCredentials(environmentName, directorConfig,
-								directorCredentialsFile, directorStateFile))))
+				.then(Mono.defer(() -> Mono.just(buildDirectorCredentials(request.getEnvironmentName(),
+						request.getDirectorConfig(), directorCredentialsFile, directorStateFile))))
 
-						.doOnTerminate(() -> cleanVarFiles(variableFilesNames));
+				.doOnTerminate(() -> cleanVarFiles(variableFilesNames));
 	}
 
 	private String format(Map<String, String> variables) {
@@ -208,4 +202,20 @@ public class BoshBootstrapClient {
 			throw new RuntimeException(e);
 		}
 	}
+
+//	private Mono<Void> uploadDirectorCredentials(DirectorInfo directorInfo) {
+//		var credhubClient = CredhubClientFactory.newCredHubClient("https://" + directorInfo.getEnvironment() + ":8433",
+//				"credhub-admin", directorInfo.getDirectorCredentials().getCredhubAdminClientSecret(),
+//				"https://" + directorInfo.getEnvironment() + ":8443/oauth/token",
+//				directorInfo.getDirectorCredentials().getCredhubCa().getCa().getBytes());
+//
+//		credhubClient.credentials().generate(
+//				CertificateParametersRequest.builder().name(new SimpleCredentialName(""))
+//						.parameters(CertificateParameters.builder().certificateAuthority(true)
+//								.certificateAuthorityCredential(
+//										directorInfo.getDirectorCredentials().getCredhubCa().getCa())
+//								.build())
+//						.build(),
+//				CredentialType.CERTIFICATE.getClass());
+//	}
 }
