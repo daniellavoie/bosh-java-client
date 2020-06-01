@@ -1,6 +1,7 @@
 package dev.daniellavoie.bosh.client.model;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
@@ -14,10 +15,11 @@ public class TaskEvent {
 	private final String state;
 	private final int progress;
 	private final TaskError error;
+	private final Map<String, Object> data; 
 
 	@JsonCreator
 	public TaskEvent(int time, String stage, List<String> tags, int total, String task, int index, String state,
-			int progress, TaskError error) {
+			int progress, TaskError error, Map<String, Object> data) {
 		this.time = time;
 		this.stage = stage;
 		this.tags = tags;
@@ -27,6 +29,7 @@ public class TaskEvent {
 		this.state = state;
 		this.progress = progress;
 		this.error = error;
+		this.data = data;
 	}
 
 	public int getTime() {
@@ -65,10 +68,15 @@ public class TaskEvent {
 		return error;
 	}
 
+	public Map<String, Object> getData() {
+		return data;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((data == null) ? 0 : data.hashCode());
 		result = prime * result + ((error == null) ? 0 : error.hashCode());
 		result = prime * result + index;
 		result = prime * result + progress;
@@ -90,6 +98,11 @@ public class TaskEvent {
 		if (getClass() != obj.getClass())
 			return false;
 		TaskEvent other = (TaskEvent) obj;
+		if (data == null) {
+			if (other.data != null)
+				return false;
+		} else if (!data.equals(other.data))
+			return false;
 		if (error == null) {
 			if (other.error != null)
 				return false;
@@ -129,6 +142,7 @@ public class TaskEvent {
 	@Override
 	public String toString() {
 		return "TaskEvent [time=" + time + ", stage=" + stage + ", tags=" + tags + ", total=" + total + ", task=" + task
-				+ ", index=" + index + ", state=" + state + ", progress=" + progress + ", error=" + error + "]";
+				+ ", index=" + index + ", state=" + state + ", progress=" + progress + ", error=" + error + ", data="
+				+ data + "]";
 	}
 }

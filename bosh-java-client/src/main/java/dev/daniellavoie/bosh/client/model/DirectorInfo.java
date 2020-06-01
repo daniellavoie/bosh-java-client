@@ -1,14 +1,17 @@
 package dev.daniellavoie.bosh.client.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class DirectorInfo {
 	private final String environment;
-	private final DirectorCredentials directorCredentials;
+	private final String directorCredentials;
 	private final String directorState;
 
 	@JsonCreator
-	public DirectorInfo(String environment, DirectorCredentials directorCredentials, String directorState) {
+	public DirectorInfo(@JsonProperty("environment") String environment,
+			@JsonProperty("directorCredentials") String directorCredentials,
+			@JsonProperty("directorState") String directorState) {
 		this.environment = environment;
 		this.directorCredentials = directorCredentials;
 		this.directorState = directorState;
@@ -18,7 +21,7 @@ public class DirectorInfo {
 		return environment;
 	}
 
-	public DirectorCredentials getDirectorCredentials() {
+	public String getDirectorCredentials() {
 		return directorCredentials;
 	}
 
@@ -65,7 +68,6 @@ public class DirectorInfo {
 
 	@Override
 	public String toString() {
-		return "DirectorInfo [environment=" + environment + ", directorCredentials=" + directorCredentials
-				+ ", directorState=" + directorState + "]";
+		return "DirectorInfo [environment=" + environment + "]";
 	}
 }

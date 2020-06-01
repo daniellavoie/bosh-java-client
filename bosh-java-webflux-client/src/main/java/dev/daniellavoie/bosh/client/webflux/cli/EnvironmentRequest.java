@@ -6,9 +6,10 @@ import java.util.Map;
 import dev.daniellavoie.bosh.client.model.DirectorConfig;
 import dev.daniellavoie.bosh.client.model.DirectorInfo;
 
-public class CreateEnvironmentRequest {
+public class EnvironmentRequest {
 	private final String environmentName;
 	private final String stateDir;
+	private final boolean recreate;
 	private final DirectorConfig directorConfig;
 	private final DirectorInfo existingDirectorInfo;
 	private final String manifest;
@@ -16,11 +17,12 @@ public class CreateEnvironmentRequest {
 	private final Map<String, String> variables;
 	private final Map<String, String> variableFiles;
 
-	public CreateEnvironmentRequest(String environmentName, String stateDir, DirectorConfig directorConfig,
+	public EnvironmentRequest(String environmentName, String stateDir, boolean recreate, DirectorConfig directorConfig,
 			DirectorInfo existingDirectorInfo, String manifest, List<String> operators, Map<String, String> variables,
 			Map<String, String> variableFiles) {
 		this.environmentName = environmentName;
 		this.stateDir = stateDir;
+		this.recreate = recreate;
 		this.directorConfig = directorConfig;
 		this.existingDirectorInfo = existingDirectorInfo;
 		this.manifest = manifest;
@@ -35,6 +37,10 @@ public class CreateEnvironmentRequest {
 
 	public String getStateDir() {
 		return stateDir;
+	}
+
+	public boolean isRecreate() {
+		return recreate;
 	}
 
 	public DirectorConfig getDirectorConfig() {

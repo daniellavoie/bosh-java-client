@@ -1,6 +1,7 @@
 package dev.daniellavoie.bosh.client.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class DirectorConfig {
 	private final String ip;
@@ -8,7 +9,8 @@ public class DirectorConfig {
 	private final String gateway;
 
 	@JsonCreator
-	public DirectorConfig(String ip, String cidr, String gateway) {
+	public DirectorConfig(@JsonProperty("ip") String ip, @JsonProperty("cidr") String cidr,
+			@JsonProperty("gateway") String gateway) {
 		this.ip = ip;
 		this.cidr = cidr;
 		this.gateway = gateway;

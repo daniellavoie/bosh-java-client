@@ -7,9 +7,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 
 public abstract class SslUtil {
-	public static SslContext createSSLContext(byte[] boshCA) {
+	public static SslContext createSSLContext(byte[][] ca) {
 		try {
-			return SslContextBuilder.forClient().trustManager(new DynamicX509TrustManager(boshCA)).build();
+			return SslContextBuilder.forClient().trustManager(new DynamicX509TrustManager(ca)).build();
 		} catch (SSLException e) {
 			throw new RuntimeException(e);
 		}
