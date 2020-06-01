@@ -1,8 +1,14 @@
 package dev.daniellavoie.bosh.client.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
+@JsonInclude(Include.NON_NULL)
+@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class DirectorCredentials {
 	private String adminPassword;
 	private String blobstoreAgentPassword;
@@ -34,15 +40,32 @@ public class DirectorCredentials {
 	private Certificate uaaSsl;
 
 	@JsonCreator
-	public DirectorCredentials(String adminPassword, String blobstoreAgentPassword, Certificate blobstoreCa,
-			String blobstoreDirectorPassword, Certificate blobstoreServerTls, String credhubAdminClientSecret,
-			Certificate credhubCa, String credhubCliUserPassword, String credhubEncryptionPassword,
-			Certificate credhubTls, Certificate defaultCa, Certificate directorSsl, String hmPassword,
-			Certificate jumpboxSsh, String mbusBootstrapPassword, Certificate mbusBootstrapSsl, Certificate natsCa,
-			Certificate natsClientsDirectorTls, Certificate natsClientsHealthMonitorTls, String natsPassword,
-			Certificate natsServerTls, String postgresPassword, String uaaAdminClientSecret,
-			String uaaClientsDirectorToCredhub, @JsonProperty("uaa_encryption_key_1") String uaaEncryptionKey1,
-			Certificate uaaJwtSigningKey, Certificate uaaServiceProviderSsl, Certificate uaaSsl) {
+	public DirectorCredentials(@JsonProperty("admin_password") String adminPassword,
+			@JsonProperty("blobstore_agent_password") String blobstoreAgentPassword,
+			@JsonProperty("blobstore_ca") Certificate blobstoreCa,
+			@JsonProperty("blobstore_director_password") String blobstoreDirectorPassword,
+			@JsonProperty("blobstore_server_tls") Certificate blobstoreServerTls,
+			@JsonProperty("credhub_admin_client_secret") String credhubAdminClientSecret,
+			@JsonProperty("credhub_ca") Certificate credhubCa,
+			@JsonProperty("credhub_cli_user_password") String credhubCliUserPassword,
+			@JsonProperty("credhub_encryption_password") String credhubEncryptionPassword,
+			@JsonProperty("credhub_tls") Certificate credhubTls, @JsonProperty("default_ca") Certificate defaultCa,
+			@JsonProperty("director_ssl") Certificate directorSsl, @JsonProperty("hm_password") String hmPassword,
+			@JsonProperty("jumpbox_ssh") Certificate jumpboxSsh,
+			@JsonProperty("mbus_bootstrap_password") String mbusBootstrapPassword,
+			@JsonProperty("mbus_bootstrap_ssl") Certificate mbusBootstrapSsl,
+			@JsonProperty("nats_ca") Certificate natsCa,
+			@JsonProperty("nats_clients_director_tls") Certificate natsClientsDirectorTls,
+			@JsonProperty("nats_clients_health_monitor_tls") Certificate natsClientsHealthMonitorTls,
+			@JsonProperty("nats_password") String natsPassword,
+			@JsonProperty("nats_server_tls") Certificate natsServerTls,
+			@JsonProperty("postgres_password") String postgresPassword,
+			@JsonProperty("uaa_admin_client_secret") String uaaAdminClientSecret,
+			@JsonProperty("uaa_clients_director_to_credhub") String uaaClientsDirectorToCredhub,
+			@JsonProperty("uaa_encryption_key_1") String uaaEncryptionKey1,
+			@JsonProperty("uaa_jwt_signing_key") Certificate uaaJwtSigningKey,
+			@JsonProperty("uaa_service_provider_ssl") Certificate uaaServiceProviderSsl,
+			@JsonProperty("uaa_ssl") Certificate uaaSsl) {
 		this.adminPassword = adminPassword;
 		this.blobstoreAgentPassword = blobstoreAgentPassword;
 		this.blobstoreCa = blobstoreCa;

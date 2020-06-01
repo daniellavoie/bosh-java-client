@@ -10,7 +10,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManagerFactory;
@@ -18,22 +18,17 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 
 public class DynamicX509TrustManager extends X509ExtendedTrustManager {
-
-	private X509Certificate[] acceptedIssuers = null;
-	private X509Certificate boshCA;
-
 	private final X509TrustManager delegate;
 
-	public DynamicX509TrustManager(byte[] boshCA) {
+	public DynamicX509TrustManager(byte[][] CAs) {
 		try {
 			var trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 
-			X509Certificate ca = (X509Certificate) CertificateFactory.getInstance("X.509")
-					.generateCertificate(new ByteArrayInputStream(boshCA));
-
-			KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+			var keystore = KeyStore.getInstance(KeyStore.getDefaultType());
 			keystore.load(null, null);
-			keystore.setCertificateEntry(Integer.toString(1), ca);
+
+			IntStream.range(0, CAs.length).boxed()
+					.forEach(index -> addCertificateToTrustStore(index, CAs[index], keystore));
 
 			trustManagerFactory.init(keystore);
 
@@ -42,6 +37,15 @@ public class DynamicX509TrustManager extends X509ExtendedTrustManager {
 					.map(trustManager -> (X509TrustManager) trustManager)
 					.orElseThrow(() -> new IllegalArgumentException("Could not find an X509TrustManager."));
 		} catch (NoSuchAlgorithmException | KeyStoreException | CertificateException | IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void addCertificateToTrustStore(int index, byte[] ca, KeyStore keystore) {
+		try {
+			keystore.setCertificateEntry(Integer.toString(index + 1), (X509Certificate) CertificateFactory
+					.getInstance("X.509").generateCertificate(new ByteArrayInputStream(ca)));
+		} catch (KeyStoreException | CertificateException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -78,11 +82,6 @@ public class DynamicX509TrustManager extends X509ExtendedTrustManager {
 
 	@Override
 	public X509Certificate[] getAcceptedIssuers() {
-		if (acceptedIssuers == null) {
-			acceptedIssuers = Stream.concat(Arrays.stream(delegate.getAcceptedIssuers()), Stream.of(boshCA))
-					.toArray(X509Certificate[]::new);
-		}
-
-		return acceptedIssuers;
+		return delegate.getAcceptedIssuers();
 	}
 }

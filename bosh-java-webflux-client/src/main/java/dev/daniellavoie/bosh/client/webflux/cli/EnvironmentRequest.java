@@ -6,7 +6,7 @@ import java.util.Map;
 import dev.daniellavoie.bosh.client.model.DirectorConfig;
 import dev.daniellavoie.bosh.client.model.DirectorInfo;
 
-public class CreateEnvironmentRequest {
+public class EnvironmentRequest {
 	private final String environmentName;
 	private final String stateDir;
 	private final DirectorConfig directorConfig;
@@ -16,7 +16,7 @@ public class CreateEnvironmentRequest {
 	private final Map<String, String> variables;
 	private final Map<String, String> variableFiles;
 
-	public CreateEnvironmentRequest(String environmentName, String stateDir, DirectorConfig directorConfig,
+	public EnvironmentRequest(String environmentName, String stateDir, DirectorConfig directorConfig,
 			DirectorInfo existingDirectorInfo, String manifest, List<String> operators, Map<String, String> variables,
 			Map<String, String> variableFiles) {
 		this.environmentName = environmentName;

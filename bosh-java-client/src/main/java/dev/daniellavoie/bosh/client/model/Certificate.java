@@ -1,7 +1,11 @@
 package dev.daniellavoie.bosh.client.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonInclude(Include.NON_NULL)
 public class Certificate {
 	private final String ca;
 	private final String certificate;
@@ -10,8 +14,9 @@ public class Certificate {
 	private final String publicKeyFingerprint;
 
 	@JsonCreator
-	public Certificate(String ca, String certificate, String privateKey, String publicKey,
-			String publicKeyFingerprint) {
+	public Certificate(@JsonProperty("ca") String ca, @JsonProperty("certificate") String certificate,
+			@JsonProperty("private_key") String privateKey, @JsonProperty("public_key") String publicKey,
+			@JsonProperty("public_key_fingerprint") String publicKeyFingerprint) {
 		this.ca = ca;
 		this.certificate = certificate;
 		this.privateKey = privateKey;

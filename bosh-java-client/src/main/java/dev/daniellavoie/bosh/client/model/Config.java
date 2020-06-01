@@ -1,6 +1,7 @@
 package dev.daniellavoie.bosh.client.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Config {
 	private final long id;
@@ -12,7 +13,9 @@ public class Config {
 	private final boolean current;
 
 	@JsonCreator
-	public Config(long id, String name, String type, String content, String team, String createdAt, boolean current) {
+	public Config(@JsonProperty("id") long id, @JsonProperty("name") String name, @JsonProperty("type") String type,
+			@JsonProperty("content") String content, @JsonProperty("team") String team,
+			@JsonProperty("created_at") String createdAt, @JsonProperty("current") boolean current) {
 		this.id = id;
 		this.name = name;
 		this.type = type;

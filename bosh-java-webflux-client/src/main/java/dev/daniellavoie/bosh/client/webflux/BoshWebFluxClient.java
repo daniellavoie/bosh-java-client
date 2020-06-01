@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ClientCodecConfigurer;
@@ -17,7 +17,6 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -27,11 +26,13 @@ import dev.daniellavoie.bosh.client.api.UploadReleaseRequest;
 import dev.daniellavoie.bosh.client.api.UploadStemcellRequest;
 import dev.daniellavoie.bosh.client.model.Config;
 import dev.daniellavoie.bosh.client.model.Deployment;
+import dev.daniellavoie.bosh.client.model.GetDeploymentResponse;
 import dev.daniellavoie.bosh.client.model.Release;
 import dev.daniellavoie.bosh.client.model.Stemcell;
 import dev.daniellavoie.bosh.client.model.Task;
 import dev.daniellavoie.bosh.client.model.Task.State;
 import dev.daniellavoie.bosh.client.model.TaskEvent;
+import dev.daniellavoie.bosh.client.model.Vm;
 import dev.daniellavoie.bosh.client.webflux.oauth2.ClientCredentialTokenRefreshFilter;
 import dev.daniellavoie.bosh.client.webflux.util.JacksonUtil;
 import dev.daniellavoie.bosh.client.webflux.util.SslUtil;
@@ -52,13 +53,13 @@ public class BoshWebFluxClient {
 
 	private final WebClient webClient;
 
-	public BoshWebFluxClient(String environment, String clientId, String clientSecret, String tokenUri, byte[] boshCA) {
+	public BoshWebFluxClient(String directorIp, String clientId, String clientSecret, String tokenUri, byte[] boshCA) {
 		var httpClientConnector = new ReactorClientHttpConnector(
-				HttpClient.create().secure(t -> t.sslContext(SslUtil.createSSLContext(boshCA))));
+				HttpClient.create().secure(t -> t.sslContext(SslUtil.createSSLContext(new byte[][] { boshCA }))));
 
 		webClient = WebClient.builder()
 
-				.baseUrl(environment)
+				.baseUrl("https://" + directorIp + ":25555")
 
 				.clientConnector(httpClientConnector)
 
@@ -90,15 +91,23 @@ public class BoshWebFluxClient {
 	}
 
 	public Mono<List<Config>> getConfigs() {
-		return webClient.get().uri("/configs?latest=true").accept(MediaType.TEXT_HTML).exchange()
-				.flatMap(response -> handleMonoResponse(response, String.class)
-						.map(value -> JacksonUtil.read(value, new TypeReference<List<Config>>() {
-						})));
+		return webClient.get().uri("/configs?latest=true")
+
+				.retrieve().bodyToMono(new ParameterizedTypeReference<List<Config>>() {
+				});
 	}
 
-	public Mono<Deployment> getDeployment(String name) {
-		return webClient.get().uri("/deployments/{name}", name).exchange()
-				.flatMap(response -> handleMonoResponse(response, Deployment.class));
+	public Mono<GetDeploymentResponse> getDeployment(String name) {
+		return webClient.get().uri("/deployments/{name}", name).retrieve().bodyToMono(GetDeploymentResponse.class);
+	}
+
+	public Flux<Deployment> getDeployments() {
+		return webClient.get().uri("/deployments")
+
+				.retrieve().bodyToMono(new ParameterizedTypeReference<List<Deployment>>() {
+				})
+
+				.flatMapMany(Flux::fromIterable);
 	}
 
 	public Flux<Release> getReleases() {
@@ -167,27 +176,33 @@ public class BoshWebFluxClient {
 						.setCompleted(task.getState().equals(State.done) || task.getState().equals(State.cancelled)
 								|| task.getState().equals(State.error) || task.getState().equals(State.timeout)))
 
-				.takeUntil(task -> taskUpdateContext.isCompleted());
+				.log("Task-Update-Compute")
+
+				.takeUntil(task -> taskUpdateContext.isCompleted())
+
+				.log("Task-Update-Completed");
 	}
 
-	private <T> Mono<T> handleMonoResponse(ClientResponse response, Class<T> bodyType) {
-		if (response.statusCode().equals(HttpStatus.NOT_FOUND)) {
-			return response.releaseBody().then(Mono.empty());
-		}
+	public Flux<Vm> getVms(String deploymentName) {
+		return webClient.get().uri("/deployments/{name}/vms", deploymentName).retrieve().bodyToFlux(Vm.class)
 
-		return response.bodyToMono(bodyType);
+				.log("bosh-webflux");
 	}
 
 	private Mono<Integer> handleTaskResponse(ClientResponse response) {
+		if (!response.statusCode().is3xxRedirection()) {
+			return response.createException().flatMap(Mono::error);
+		}
+
 		String[] paths = response.headers().asHttpHeaders().getLocation().getPath().split("/");
 
 		return response.releaseBody().thenReturn(Integer.parseInt(paths[paths.length - 1]));
 	}
 
 	public Mono<Config> updateConfig(UpdateConfigRequest request) {
-		return webClient.post().uri("/configs").bodyValue(request).exchange()
-				.flatMap(response -> handleMonoResponse(response, String.class)
-						.map(value -> JacksonUtil.read(value, Config.class)));
+		return webClient.post().uri("/configs").bodyValue(request)
+
+				.retrieve().bodyToMono(Config.class);
 	}
 
 	public Mono<Integer> uploadRelease(UploadReleaseRequest uploadReleaseRequest) {

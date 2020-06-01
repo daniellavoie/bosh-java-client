@@ -3,6 +3,9 @@ package dev.daniellavoie.bosh.client.webflux;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -23,12 +26,15 @@ import dev.daniellavoie.bosh.client.api.UpdateConfigRequest;
 import dev.daniellavoie.bosh.client.api.UploadReleaseRequest;
 import dev.daniellavoie.bosh.client.api.UploadStemcellRequest;
 import dev.daniellavoie.bosh.client.model.Config;
-import dev.daniellavoie.bosh.client.model.Deployment;
 import dev.daniellavoie.bosh.client.model.DirectorConfig;
-import dev.daniellavoie.bosh.client.model.DirectorInfo;
+import dev.daniellavoie.bosh.client.model.DirectorCredentials;
+import dev.daniellavoie.bosh.client.model.GetDeploymentResponse;
 import dev.daniellavoie.bosh.client.model.Task;
-import dev.daniellavoie.bosh.client.webflux.cli.BoshBootstrapClient;
-import dev.daniellavoie.bosh.client.webflux.cli.CreateEnvironmentRequest;
+import dev.daniellavoie.bosh.client.webflux.cli.BoshEnvironmentClient;
+import dev.daniellavoie.bosh.client.webflux.cli.EnvironmentRequest;
+import dev.daniellavoie.bosh.client.webflux.cli.MockedBoshCli;
+import dev.daniellavoie.bosh.client.webflux.util.ClasspathUtil;
+import dev.daniellavoie.bosh.client.webflux.util.JacksonUtil;
 
 @SpringBootTest
 public class BoshWebFluxClientTest {
@@ -39,7 +45,7 @@ public class BoshWebFluxClientTest {
 	final ObjectMapper OBJECTMAPPER = new ObjectMapper(new YAMLFactory())
 			.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE).findAndRegisterModules();
 
-	private BoshBootstrapClient boshBootstrapClient = new BoshBootstrapClient("/usr/local/bin/bosh");
+	private BoshEnvironmentClient boshEnvironmentClient = new BoshEnvironmentClient(new MockedBoshCli());
 	private BoshWebFluxClient boshClient;
 
 	private String getStateDir(String environmentName) {
@@ -49,10 +55,10 @@ public class BoshWebFluxClientTest {
 	private void cleanUpDeployment() {
 		LOGGER.info("Cleaning up deployment {}.", DEPLOYMENT_NAME);
 
-		Deployment deployment = getBoshClient().getDeployment("pinot-cluster").block();
+		GetDeploymentResponse getDeploymentResponse = getBoshClient().getDeployment("pinot-cluster").block();
 
-		if (deployment == null) {
-			LOGGER.info("Deployment {} coud not be found. Skipping cleanup.", DEPLOYMENT_NAME);
+		if (getDeploymentResponse == null) {
+			LOGGER.info("GetDeploymentResponse {} coud not be found. Skipping cleanup.", DEPLOYMENT_NAME);
 
 			return;
 		}
@@ -62,7 +68,7 @@ public class BoshWebFluxClientTest {
 
 		Assertions.assertEquals(Task.State.done, deleteDeploymentTask.getState());
 
-		LOGGER.info("Deployment {} successfully cleaned up.", DEPLOYMENT_NAME);
+		LOGGER.info("GetDeploymentResponse {} successfully cleaned up.", DEPLOYMENT_NAME);
 	}
 
 	private BoshWebFluxClient getBoshClient() {
@@ -73,19 +79,22 @@ public class BoshWebFluxClientTest {
 
 			var variables = Map.of("outbound_network_name", "NatNetwork");
 
-			var request = new CreateEnvironmentRequest("bosh-lite", getStateDir("bosh-lite"),
-					new DirectorConfig("192.168.50.6", "192.168.50.0/24", "192.168.50.1"),
-					new DirectorInfo(null, null, null), "bosh-manifests/bosh.yml", operators, variables, Map.of());
+			var request = new EnvironmentRequest("bosh-lite", getStateDir("bosh-lite"),
+					new DirectorConfig("192.168.50.6", "192.168.50.0/24", "192.168.50.1"), null,
+					"bosh-manifests/bosh.yml", operators, variables, Map.of());
 
-			var directorInfo = boshBootstrapClient
+			var directorInfo = boshEnvironmentClient
 					.createEnvironment(request, log -> LOGGER.info(log), log -> LOGGER.error(log))
 
 					.block();
 
-			boshClient = new BoshWebFluxClient("https://" + directorInfo.getEnvironment() + ":25555", "admin",
-					directorInfo.getDirectorCredentials().getAdminPassword(),
+			var directorCredentials = JacksonUtil.readYaml(directorInfo.getDirectorCredentials(),
+					DirectorCredentials.class);
+
+			boshClient = new BoshWebFluxClient(directorInfo.getEnvironment(), "admin",
+					directorCredentials.getAdminPassword(),
 					"https://" + directorInfo.getEnvironment() + ":8443/oauth/token",
-					directorInfo.getDirectorCredentials().getDirectorSsl().getCa().getBytes());
+					directorCredentials.getDirectorSsl().getCa().getBytes());
 		}
 
 		return boshClient;
@@ -93,6 +102,15 @@ public class BoshWebFluxClientTest {
 
 	@Test
 	public void assertDeployment() throws IOException {
+		// Write mocked state files.
+		Files.write(Path.of(getStateDir("bosh-lite"), "director-credentials.yml"),
+				ClasspathUtil.readContent("environment/credentials.yml").getBytes(), StandardOpenOption.CREATE,
+				StandardOpenOption.TRUNCATE_EXISTING);
+
+		Files.write(Path.of(getStateDir("bosh-lite"), "director-state.json"),
+				ClasspathUtil.readContent("environment/state.json").getBytes(), StandardOpenOption.CREATE,
+				StandardOpenOption.TRUNCATE_EXISTING);
+
 		List<Config> configs = getBoshClient().getConfigs().block();
 
 		Assertions.assertNotNull(configs);
@@ -162,7 +180,7 @@ public class BoshWebFluxClientTest {
 
 		taskId = getBoshClient().deploy(manifest).block();
 
-		LOGGER.info("Deployment running through task {}.", taskId);
+		LOGGER.info("GetDeploymentResponse running through task {}.", taskId);
 
 		getBoshClient().getTaskEvents(taskId)
 
